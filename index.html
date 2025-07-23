@@ -3,81 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XQQ的厨房</title>
+    <title>实时文本同步</title>
     <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 50px;
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; color: #333; }
+        textarea { 
+            width: 90%; 
+            max-width: 800px; 
+            height: 80vh; 
+            padding: 20px; 
+            font-size: 1.2em; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+            resize: none; 
+            outline: none; 
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        .upload-box {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-        }
-        #textInput {
-            width: 100%;
-            height: 100px;
-            margin-top: 20px;
+        textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 8px rgba(0,123,255,0.2);
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">XQQ的厨房</h1>
-    <div class="upload-box" id="upload-box">拖拽到这里或点击上传</div>
-    <input type="file" id="fileInput" style="display: none;">
-    <textarea id="textInput" placeholder="在这里输入文字..."></textarea>
-    <div id="preview"></div>
+
+    <textarea id="editor" placeholder="在这里输入..."></textarea>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const uploadBox = document.getElementById('upload-box');
-        const fileInput = document.getElementById('fileInput');
-        const preview = document.getElementById('preview');
-        const textInput = document.getElementById('textInput');
+        const editor = document.getElementById('editor');
+        const socket = io();
 
-        // 处理文件上传的逻辑
-        uploadBox.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadBox.classList.add('dragover');
+        // When user types, send update to server
+        editor.addEventListener('input', () => {
+            socket.emit('text update', editor.value);
         });
 
-        uploadBox.addEventListener('dragleave', () => {
-            uploadBox.classList.remove('dragover');
+        // Receive initial text from server on connection
+        socket.on('initial text', (text) => {
+            editor.value = text;
         });
 
-        uploadBox.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadBox.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-
-        uploadBox.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const files = e.target.files;
-            handleFiles(files);
-        });
-
-        function handleFiles(files) {
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const fileContent = e.target.result;
-                    const fileElement = document.createElement('div');
-                    fileElement.textContent = `文件名: ${file.name}, 大小: ${file.size} bytes`;
-                    preview.appendChild(fileElement);
-                };
-                reader.readAsDataURL(file);
+        // Receive updates from other clients
+        socket.on('text update', (text) => {
+            // To prevent cursor jumping, only update if text is different
+            if (editor.value !== text) {
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = text;
+                editor.setSelectionRange(start, end);
             }
-        }
-
-        // 处理文字输入的逻辑
-        textInput.addEventListener('input', () => {
-            // 直接将输入内容显示在页面上
-            preview.textContent = textInput.value;
         });
+
     </script>
+
 </body>
 </html>
